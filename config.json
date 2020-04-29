@@ -1,8 +1,8 @@
 {
-    "url": "https://dev.azure.com/lpcarignan",
+    "url": "<URL base project>",
     "project": {
         "name": "akpa",
-        "token":"hpdpv2lx3qpcu2nc2xvxdememh4oe4nzxcyrbzzc7gziisnlgv3a",
+        "token":"<personal token key>",
         "csvFilename":"akpa.csv",
         "dateformat":"MM/dd/yyyy",
         "queries":{
@@ -22,7 +22,6 @@
             "Status",
             "Tags",
             "Effort"
-        ],
-        "dateFormat":"YYYY/MM/DD"
+        ]
     }
 }

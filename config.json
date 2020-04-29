@@ -1,0 +1,28 @@
+{
+    "url": "https://dev.azure.com/lpcarignan",
+    "project": {
+        "name": "akpa",
+        "token":"hpdpv2lx3qpcu2nc2xvxdememh4oe4nzxcyrbzzc7gziisnlgv3a",
+        "csvFilename":"akpa.csv",
+        "dateformat":"MM/dd/yyyy",
+        "queries":{
+            "wip":"My queries/akpa_wip_items",
+            "done":"My queries/akpa_done_items"
+        },
+        "workflow": [
+            "Ready",
+            "To Groom",
+            "Sprint Backlog",
+            "In Development",
+            "In Review",
+            "Pending Deployment",
+            "Done"
+        ],
+        "properties":[
+            "Status",
+            "Tags",
+            "Effort"
+        ],
+        "dateFormat":"YYYY/MM/DD"
+    }
+}

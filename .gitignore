@@ -6,6 +6,9 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 
+# Ignore the config.json as it contains credentials.
+config.json
+
 # output files
 out
 

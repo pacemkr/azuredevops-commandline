@@ -1,27 +1,19 @@
 {
     "url": "<URL base project>",
+{
+    "url": <The base URL where to extract data from> 
     "project": {
-        "name": "akpa",
-        "token":"<personal token key>",
-        "csvFilename":"akpa.csv",
-        "dateformat":"MM/dd/yyyy",
+        "name": <The name of the project>,
+        "token":<The token key>,
+        "csvFilename":<The name of the csv file. Defaults to the name of project if none is given>,
+        "dateformat":<The date format for dates in the csv file>,
         "queries":{
-            "wip":"My queries/akpa_wip_items",
-            "done":"My queries/akpa_done_items"
+            "wip":<The query to fetch the Work In Progress items>,
+            "done":"<The query to fetch the Done items>"
         },
-        "workflow": [
-            "Ready",
-            "To Groom",
-            "Sprint Backlog",
-            "In Development",
-            "In Review",
-            "Pending Deployment",
-            "Done"
+        "workflow": [ <An array of columns representing the columns to fetch>
         ],
-        "properties":[
-            "Status",
-            "Tags",
-            "Effort"
+        "properties":[ <An array of additional properties to extract>
         ]
     }
 }

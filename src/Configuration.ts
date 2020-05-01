@@ -30,10 +30,6 @@ export class Configuration{
         return this.config.project.queries.done as string;
     }
 
-    public get Workflow():Array<string>{
-        return this.config.project.workflow as Array<string>;
-    }
-
     private constructor(){
         this.config = require('./config.json');
     }

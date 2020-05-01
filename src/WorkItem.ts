@@ -1,13 +1,13 @@
 import {Configuration} from "./Configuration";
+import {format} from 'date-fns';
 
-import {format} from "date-fns";
 import * as _ from 'lodash';
 
 export class WorkItem{
 
     constructor(public Id:number,
         public Title:string,
-        public WorkflowDates:Array<any>,
+        public WorkflowDates:Array<string>,
         public Properties:Array<string>){}
 
 
@@ -20,8 +20,9 @@ export class WorkItem{
 
         for (let item of this.WorkflowDates){
             let key = Object.keys(item)[0];
-            if (item[ key ] != "")
-                item[ key ] = format( item[ key ], Configuration.getInstance().DateFormat);
+            let value = item[ key ];
+            if (value !== undefined)
+                item[ key ] = format(value, Configuration.getInstance().DateFormat);
 
             Object.assign(t, item);
         }

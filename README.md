@@ -25,8 +25,6 @@ To make it easy to understand how to configure the extraction, here's an example
             "wip":<The query to fetch the Work In Progress items>,
             "done":"<The query to fetch the Done items>"
         },
-        "workflow": [ <An array of columns representing the columns to fetch>
-        ],
         "properties":[ <An array of additional properties to extract>
         ]
     }

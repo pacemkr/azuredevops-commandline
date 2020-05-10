@@ -22,6 +22,10 @@ export class Configuration{
         return this.config.project.token as string;
     }
 
+    public get BoardName():string{
+        return this.config.project.boardName as string;
+    }
+
     public get WipQuery():string{
         return this.config.project.queries.wip as string;
     }

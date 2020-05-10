@@ -1,9 +1,25 @@
+import * as winston from "winston";
 import * as _ from 'lodash';
 
 import {AzureConnection} from "./AzureConnection"
 import {CsvExporter} from "./CsvExporter"
 import {Configuration} from "./Configuration"
 import { WorkItem } from './WorkItem';
+
+winston.configure({
+    transports: [
+        // new BrowserConsole(
+        //     {
+        //         format: winston.format.simple(),
+        //         level: "debug",
+        //     },
+        // ),
+        new winston.transports.Console({
+            format: winston.format.simple(),
+            level:"debug"
+        }),
+    ],
+})
 
 let ac = new AzureConnection();
 ac.run().then(function(result){
@@ -15,5 +31,5 @@ ac.run().then(function(result){
 
     csvExporter.export(workItems);    
 }).catch(function(error){
-    console.log(error)
+    winston.log(error)
 })

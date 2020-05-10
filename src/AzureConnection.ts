@@ -1,3 +1,4 @@
+import * as winston from 'winston';
 import * as _ from 'lodash';
 import { differenceInMilliseconds, parseISO, parse } from "date-fns";
 
@@ -28,7 +29,8 @@ export class AzureConnection {
         let authHandler = azdev.getPersonalAccessTokenHandler(token);
         let connection = new azdev.WebApi(orgUrl, authHandler);
         let connData: lim.ConnectionData = await connection.connect();
-        console.log(`Hello ${connData.authenticatedUser.providerDisplayName}`);
+        winston.info(`Hello ${connData.authenticatedUser.providerDisplayName}`);
+        winston.info(`Connected to ${Configuration.getInstance().Url}`)
 
         const workApiObject: WorkApi.IWorkApi = await connection.getWorkApi();
         const coreApiObject: CoreApi.CoreApi = await connection.getCoreApi();
@@ -41,20 +43,29 @@ export class AzureConnection {
             teamId: project.defaultTeam.id
         };
 
-        const columns = await workApiObject.getBoardColumns(teamContext, "Issues");
-        this.createWorkflow(columns);
+        winston.info(`Connected to project ${project.name}`);
 
+        winston.info(`Fetching board '${Configuration.getInstance().BoardName}'`);
+        const columns = await workApiObject.getBoardColumns(teamContext, Configuration.getInstance().BoardName);
+        this.createWorkflow(columns);
+        winston.info(`Workflow is: ${this.Workflow}`)
+
+        winston.info(`Calling query ${Configuration.getInstance().WipQuery}`);
         const wip: witInterfaces.QueryHierarchyItem = await witApi.getQuery(projectName, Configuration.getInstance().WipQuery);
-        let results: witInterfaces.WorkItemQueryResult = await witApi.queryById(wip.id, teamContext, false);
+        let results: witInterfaces.WorkItemQueryResult = await witApi.queryById(wip.id, teamContext, false);        
         this.wipWorkItems = await this.extractWorkItems(results.workItems, witApi);
 
+        winston.info(`Calling query ${Configuration.getInstance().DoneQuery}`);
         const done: witInterfaces.QueryHierarchyItem = await witApi.getQuery(projectName, Configuration.getInstance().DoneQuery);
         results = await witApi.queryById(done.id, teamContext, false);
         this.doneWorkItems = await this.extractWorkItems(results.workItems, witApi);
     }
 
     private async extractWorkItems(workItems:witInterfaces.WorkItemReference[], witApi: witApi.IWorkItemTrackingApi):Promise<Array<WorkItem>>{
-        console.log(`Got ${workItems.length} work items`);
+        winston.info(`  Got ${workItems.length} work items`);
+        if (workItems.length === 0)
+            return;
+
         let updates: witInterfaces.WorkItemUpdate[];
         let start = new Date();
         let myWorkItems = new Array<WorkItem>(workItems.length);
@@ -72,7 +83,7 @@ export class AzureConnection {
                                          this.extractProperties(workflowDates, updates));
         }
         let end = differenceInMilliseconds(new Date(), start);
-        console.log(`It took ${end} milliseconds`);
+        winston.info(`  It took ${end} milliseconds to extract the work items`);
 
         return myWorkItems;
     }

@@ -10,7 +10,9 @@
     "azure-devops-node-api": "^10.1.1",
     "date-fns": "^2.12.0",
     "fast-csv": "^4.1.3",
-    "lodash": "^4.17.15"
+    "lodash": "^4.17.15",
+    "winston": "^3.2.1",
+    "winston-transport-browserconsole": "^1.0.5"
   },
   "scripts": {
     "start": "node out/main.js",

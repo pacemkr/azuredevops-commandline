@@ -63,25 +63,42 @@ export class AzureConnection {
             workItem = workItems[i];
             updates = await witApi.getUpdates(workItem.id);
 
-            let workFlowDates = this.extractColumnsAndDates(updates);
-            let title = this.extractTitle(updates);
-            let status = this.extractStatus(workFlowDates);
+            let workflowDates = this.extractColumnsAndDates(updates)
 
-            myWorkItems[i] = new WorkItem(workItem.id, title, workFlowDates, [status, "0"]);
+            myWorkItems[i] = new WorkItem(workItem.id, 
+                                         this.generateLink(workItem.id),
+                                         this.extractTitle(updates), 
+                                         workflowDates, 
+                                         this.extractProperties(workflowDates, updates));
         }
         let end = differenceInMilliseconds(new Date(), start);
         console.log(`It took ${end} milliseconds`);
 
         return myWorkItems;
     }
-    private extractStatus(workFlowDates: Array<any>): string {
 
-        _.forEachRight(workFlowDates, (x, index) => {
+    private generateLink(id:number):string{
+        return `${Configuration.getInstance().Url}/${Configuration.getInstance().ProjectName}/_workitems/edit/${id}`
+    }
+
+    private extractProperties(workflowDates:any[], updates:witInterfaces.WorkItemUpdate[]):Object{
+
+        let properties = new Array<string>();
+        let status:string;
+        _.forEachRight(workflowDates, (x, index) => {
             if (x['Date'] != undefined)
-                return this.columns[index];
+                status = this.columns[index];
         })
 
-        return this.columns[0];
+        status = this.columns[0];
+
+
+        let workItemType = updates[0].fields["System.WorkItemType"].newValue;
+
+        return {
+            'Status':status,
+            "Work Item Type":workItemType
+        };
     }
 
     private extractColumnsAndDates(updates: witInterfaces.WorkItemUpdate[]): Array<any> {

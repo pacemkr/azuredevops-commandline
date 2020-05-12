@@ -7,6 +7,8 @@ import {Configuration} from "./Configuration"
 import { WorkItem } from './WorkItem';
 
 winston.configure({
+    level: 'info',
+    format: winston.format.simple(),
     transports: [
         // new BrowserConsole(
         //     {
@@ -14,12 +16,10 @@ winston.configure({
         //         level: "debug",
         //     },
         // ),
-        new winston.transports.Console({
-            format: winston.format.simple(),
-            level:"debug"
-        }),
+        new winston.transports.Console()
     ],
 })
+
 
 let ac = new AzureConnection();
 ac.run().then(function(result){
@@ -31,5 +31,5 @@ ac.run().then(function(result){
 
     csvExporter.export(workItems);    
 }).catch(function(error){
-    winston.log(error)
+    winston.error(error)
 })

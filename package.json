@@ -17,7 +17,7 @@
   "scripts": {
     "start": "node out/main.js",
     "prestart": "npm run build",
-    "build": "tsc && cp config.json ./out",
+    "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {

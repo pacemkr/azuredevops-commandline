@@ -72,6 +72,7 @@ export class AzureConnection {
         let workItem: witInterfaces.WorkItemReference;
         for (let i in workItems) {
             workItem = workItems[i];
+            let id = workItem.id;
             updates = await witApi.getUpdates(workItem.id);
 
             let workflowDates = this.extractColumnsAndDates(updates)
@@ -116,6 +117,9 @@ export class AzureConnection {
         let workflowDates = new Array<any>();
 
         let columns = _.filter(updates, (x) => {
+            if (x.fields === undefined)
+                return false;
+
             return x.fields['System.BoardColumn'] !== undefined ||
                 x.fields['System.BoardColumnDone'] !== undefined
         });
@@ -128,11 +132,11 @@ export class AzureConnection {
         });
 
         _.forEach(this.columns, function (columnName, index) {
-            let item = _.find(columnsMap, (x) => { return x.ColumnName == columnName });
+            // Find the latest date in which the work item went into the column
+            let item = _.findLast(columnsMap, (x) => { return x.ColumnName == columnName });
 
-            if (item !== undefined) {
+            if (item !== undefined)
                 workflowDates.push({ [columnName]: item.Date });
-            }
             else
                 workflowDates.push({ [columnName]: undefined });
 
@@ -147,9 +151,10 @@ export class AzureConnection {
         let subColumn = update.fields['System.BoardColumnDone']
 
         if (column !== undefined) {
-
-            if (subColumn === undefined || subColumn.oldValue === undefined) {
-                this.lastColumn = column.newValue;
+            // Work item move to a new column
+            this.lastColumn = column.newValue;
+            
+            if (subColumn === undefined || subColumn.oldValue === undefined) {    
                 // 3 scenarios in this block
                 //  1- This is the first column of the board
                 //  2- Work item moved from columns without subcolumns
@@ -161,8 +166,9 @@ export class AzureConnection {
             }
             else if (subColumn !== undefined) {
                 // 2 scenarios in this block
-                //  1- Work Item moved from columns with subcolumns
-                //  2- Work Item moved from column with subcolumns to a column without subcolumn
+                //  1- From columns with subcolumns
+                //  2- From column with subcolumns to column without subcolumn
+                // 3 - From column with subolumns to column with subcolumns
                 if (this.isSplitColumn[column.newValue]) {
                     if (subColumn.newValue === true)
                         // Doing -> Done
@@ -209,7 +215,13 @@ export class AzureConnection {
 
     private extractTitle(updates: witInterfaces.WorkItemUpdate[]): string {
 
-        let update = _.findLast(updates, (x) => { return x.fields['System.Title'] !== undefined; });
+        let update = _.findLast(updates, (x) => { 
+            if (x.fields === undefined)
+                return false;
+
+            return x.fields['System.Title'] !== undefined; 
+        });
+        
         if (update !== undefined)
             return update.fields['System.Title'].newValue;
         else

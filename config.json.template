@@ -1,6 +1,4 @@
 {
-    "url": "<URL base project>",
-{
     "url": <The base URL where to extract data from> 
     "project": {
         "name": <The name of the project>,

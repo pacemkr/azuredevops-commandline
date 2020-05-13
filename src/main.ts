@@ -22,17 +22,20 @@ winston.configure({
 
 
 let ac = new AzureConnection();
-ac.run().then(function(result){
-    let headers = _.clone(ac.Workflow);
-    headers = _.concat(headers, Configuration.getInstance().Properties);
+ac.connect().then(async function(result){
+    await ac.getProject();
+    await ac.getBoardColumns();
+
+    for (let query of Configuration.getInstance().Queries){
+        await ac.fetchPbis(query);
+    }
+
  
     let csvExporter = new CsvExporter(
-        headers, 
+        ac.Headers, 
         Configuration.getInstance().CsvFilename);
     
-    let workItems = _.concat(ac.WipWorkItems, ac.DoneWorkItems);
-
-    csvExporter.export(workItems);    
+    csvExporter.export(ac.Pbis);    
 }).catch(function(error){
     winston.error(error)
 })

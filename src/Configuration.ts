@@ -26,12 +26,8 @@ export class Configuration{
         return this.config.project.boardName as string;
     }
 
-    public get WipQuery():string{
-        return this.config.project.queries.wip as string;
-    }
-
-    public get DoneQuery():string{
-        return this.config.project.queries.done as string;
+    public get Queries():string[]{
+        return this.config.project.queries as string[];
     }
 
     public get Properties():string[]{

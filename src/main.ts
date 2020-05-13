@@ -22,7 +22,11 @@ winston.configure({
 
 
 let ac = new AzureConnection();
-ac.run().then(function(result){
+ac.connect().then(async function(result){
+    await ac.getProject();
+    await ac.getBoardColumns();
+    await ac.fetchPbis();
+
     let headers = _.clone(ac.Workflow);
     headers = _.concat(headers, Configuration.getInstance().Properties);
  

@@ -13,52 +13,82 @@ import * as witInterfaces from 'azure-devops-node-api/interfaces/WorkItemTrackin
 import { Configuration } from "./Configuration"
 import { WorkItem } from "./WorkItem";
 import { BoardColumn } from 'azure-devops-node-api/interfaces/WorkInterfaces';
+import { isNull } from 'lodash';
 
 export class AzureConnection {
 
-    constructor() {
+    constructor() {        
     }
  
-    async run(): Promise<void> {
+    async connect(): Promise<void> {
 
         let orgUrl = Configuration.getInstance().Url;
 
         let token: string = Configuration.getInstance().Token;
-        let projectName = Configuration.getInstance().ProjectName;
 
         let authHandler = azdev.getPersonalAccessTokenHandler(token);
-        let connection = new azdev.WebApi(orgUrl, authHandler);
-        let connData: lim.ConnectionData = await connection.connect();
+        this.azureConnection = new azdev.WebApi(orgUrl, authHandler);
+        let connData: lim.ConnectionData = await this.azureConnection.connect();
         winston.info(`Hello ${connData.authenticatedUser.providerDisplayName}`);
         winston.info(`Connected to ${Configuration.getInstance().Url}`)
+    }
 
-        const workApiObject: WorkApi.IWorkApi = await connection.getWorkApi();
-        const coreApiObject: CoreApi.CoreApi = await connection.getCoreApi();
-        const witApi: witApi.IWorkItemTrackingApi = await connection.getWorkItemTrackingApi();
+    public async fetchPbis():Promise<void>{
+        let projectName = Configuration.getInstance().ProjectName;
+
+        winston.info(`Calling query ${Configuration.getInstance().WipQuery}`);
+        const witApi: witApi.IWorkItemTrackingApi = await this.azureConnection.getWorkItemTrackingApi();
+
+        const wip: witInterfaces.QueryHierarchyItem = await witApi.getQuery(projectName, Configuration.getInstance().WipQuery);
+        let results: witInterfaces.WorkItemQueryResult = await witApi.queryById(wip.id, this.teamContext, false);        
+        this.wipWorkItems = await this.extractWorkItems(results.workItems, witApi);
+
+        winston.info(`Calling query ${Configuration.getInstance().DoneQuery}`);
+        const done: witInterfaces.QueryHierarchyItem = await witApi.getQuery(projectName, Configuration.getInstance().DoneQuery);
+        results = await witApi.queryById(done.id, this.teamContext, false);
+        this.doneWorkItems = await this.extractWorkItems(results.workItems, witApi);
+
+    }
+    
+    public async getProject():Promise<void>{
+        let projectName = Configuration.getInstance().ProjectName;
+
+        const coreApiObject: CoreApi.CoreApi = await this.azureConnection.getCoreApi();
         const project: CoreInterfaces.TeamProject = await coreApiObject.getProject(projectName);
-        const teamContext: CoreInterfaces.TeamContext = {
-            project: projectName,
+
+        if (_.isNull(project)){
+            winston.error(`Project ${projectName} not found. Exiting now.`)
+            process.exit(1)
+        }
+
+        this.teamContext = {
+            project: project.name,
             projectId: project.id,
             team: project.defaultTeam.name,
             teamId: project.defaultTeam.id
         };
 
         winston.info(`Connected to project ${project.name}`);
+    }
 
-        winston.info(`Fetching board '${Configuration.getInstance().BoardName}'`);
-        const columns = await workApiObject.getBoardColumns(teamContext, Configuration.getInstance().BoardName);
+    public async getBoardColumns():Promise<void>{
+        if (this.teamContext === undefined){
+            winston.error(`Team context not created yet. Exiting now`);
+            process.exit(1);
+        }
+
+        let boardName = Configuration.getInstance().BoardName;
+        winston.info(`Fetching board '${boardName}'`);
+        const workApiObject: WorkApi.IWorkApi = await this.azureConnection.getWorkApi();
+        const columns = await workApiObject.getBoardColumns(this.teamContext, boardName);
+
+        if (_.isNull(columns)){
+            winston.error(`Board ${boardName} not found. Exiting now.`)
+            process.exit(1)
+        }
+
         this.createWorkflow(columns);
         winston.info(`Workflow is: ${this.Workflow}`)
-
-        winston.info(`Calling query ${Configuration.getInstance().WipQuery}`);
-        const wip: witInterfaces.QueryHierarchyItem = await witApi.getQuery(projectName, Configuration.getInstance().WipQuery);
-        let results: witInterfaces.WorkItemQueryResult = await witApi.queryById(wip.id, teamContext, false);        
-        this.wipWorkItems = await this.extractWorkItems(results.workItems, witApi);
-
-        winston.info(`Calling query ${Configuration.getInstance().DoneQuery}`);
-        const done: witInterfaces.QueryHierarchyItem = await witApi.getQuery(projectName, Configuration.getInstance().DoneQuery);
-        results = await witApi.queryById(done.id, teamContext, false);
-        this.doneWorkItems = await this.extractWorkItems(results.workItems, witApi);
     }
 
     private async extractWorkItems(workItems:witInterfaces.WorkItemReference[], witApi: witApi.IWorkItemTrackingApi):Promise<Array<WorkItem>>{
@@ -87,10 +117,6 @@ export class AzureConnection {
         winston.info(`  It took ${end} milliseconds to extract the work items`);
 
         return myWorkItems;
-    }
-
-    private generateLink(id:number):string{
-        return `${Configuration.getInstance().Url}/${Configuration.getInstance().ProjectName}/_workitems/edit/${id}`
     }
 
     private extractProperties(workflowDates:any[], updates:witInterfaces.WorkItemUpdate[]):Object{
@@ -230,6 +256,10 @@ export class AzureConnection {
         }
     }
 
+    private generateLink(id:number):string{
+        return `${Configuration.getInstance().Url}/${Configuration.getInstance().ProjectName}/_workitems/edit/${id}`
+    }
+
     private extractTitle(updates: witInterfaces.WorkItemUpdate[]): string {
 
         let update = _.findLast(updates, (x) => { 
@@ -258,4 +288,7 @@ export class AzureConnection {
     private columns: Array<string>;
     private isSplitColumn: Map<string, boolean>;
     private lastColumn: string;
+
+    private azureConnection: azdev.WebApi = undefined;
+    private teamContext: CoreInterfaces.TeamContext = undefined;
 }

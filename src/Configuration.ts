@@ -34,6 +34,10 @@ export class Configuration{
         return this.config.project.queries.done as string;
     }
 
+    public get Properties():string[]{
+        return this.config.project.properties as string[];
+    }
+
     private constructor(){
         this.config = require('./config.json');
     }

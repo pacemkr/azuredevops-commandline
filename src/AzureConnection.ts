@@ -96,20 +96,37 @@ export class AzureConnection {
     private extractProperties(workflowDates:any[], updates:witInterfaces.WorkItemUpdate[]):Object{
 
         let properties = new Array<string>();
-        let status:string;
-        _.forEachRight(workflowDates, (x, index) => {
-            if (x['Date'] != undefined)
-                status = this.columns[index];
-        })
+        let status:string = '';
+        let s = _.findLast(workflowDates, (x) => {
+            if (x !== undefined)
+                return true;
+            else
+                return false;
+            });
 
-        status = this.columns[0];
-
+        if (_.isEmpty(s))
+            status = this.columns[0];
+        else
+            status = s['ColumnName'];
 
         let workItemType = updates[0].fields["System.WorkItemType"].newValue;
+        let effortField = _.findLast(updates, (x) => {
+            if (x.fields !== undefined &&
+                x.fields['Microsoft.VSTS.Scheduling.Effort'] !== undefined &&
+                x.fields['Microsoft.VSTS.Scheduling.Effort'].newValue !== undefined)
+                return true;
+            else
+                return false;
+         });
+
+        let effort = '';
+        if (effortField !== undefined) 
+            effort = effortField.fields['Microsoft.VSTS.Scheduling.Effort'].newValue;
 
         return {
             'Status':status,
-            "Work Item Type":workItemType
+            "Type":workItemType,
+            "Effort": effort
         };
     }
 

@@ -23,8 +23,11 @@ winston.configure({
 
 let ac = new AzureConnection();
 ac.run().then(function(result){
+    let headers = _.clone(ac.Workflow);
+    headers = _.concat(headers, Configuration.getInstance().Properties);
+ 
     let csvExporter = new CsvExporter(
-        ac.Workflow, 
+        headers, 
         Configuration.getInstance().CsvFilename);
     
     let workItems = _.concat(ac.WipWorkItems, ac.DoneWorkItems);

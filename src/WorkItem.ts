@@ -31,6 +31,7 @@ export class WorkItem{
         }
 
         // Set the properties to the data object
-        return Object.assign(data, this.Properties);
+        let t = Object.assign(data, this.Properties);
+        return t;
     }
 }

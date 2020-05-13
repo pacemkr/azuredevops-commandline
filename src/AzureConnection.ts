@@ -18,6 +18,7 @@ import { isNull } from 'lodash';
 export class AzureConnection {
 
     constructor() {        
+        this.pbis = new Array<WorkItem>(0);
     }
  
     async connect(): Promise<void> {
@@ -33,21 +34,17 @@ export class AzureConnection {
         winston.info(`Connected to ${Configuration.getInstance().Url}`)
     }
 
-    public async fetchPbis():Promise<void>{
-        let projectName = Configuration.getInstance().ProjectName;
+    public async fetchPbis(query):Promise<void>{
 
-        winston.info(`Calling query ${Configuration.getInstance().WipQuery}`);
+        winston.info(`Calling query ${query}`);
         const witApi: witApi.IWorkItemTrackingApi = await this.azureConnection.getWorkItemTrackingApi();
 
-        const wip: witInterfaces.QueryHierarchyItem = await witApi.getQuery(projectName, Configuration.getInstance().WipQuery);
-        let results: witInterfaces.WorkItemQueryResult = await witApi.queryById(wip.id, this.teamContext, false);        
-        this.wipWorkItems = await this.extractWorkItems(results.workItems, witApi);
+        const azureQuery: witInterfaces.QueryHierarchyItem = await witApi.getQuery(this.teamContext.project, query);
+        let results: witInterfaces.WorkItemQueryResult = await witApi.queryById(azureQuery.id, this.teamContext, false);        
+        let workItems = await this.extractWorkItems(results.workItems, witApi);
 
-        winston.info(`Calling query ${Configuration.getInstance().DoneQuery}`);
-        const done: witInterfaces.QueryHierarchyItem = await witApi.getQuery(projectName, Configuration.getInstance().DoneQuery);
-        results = await witApi.queryById(done.id, this.teamContext, false);
-        this.doneWorkItems = await this.extractWorkItems(results.workItems, witApi);
-
+        winston.info(`Adding ${workItems.length} to total list`);
+        this.pbis = _.concat(this.pbis, workItems);
     }
     
     public async getProject():Promise<void>{
@@ -80,14 +77,14 @@ export class AzureConnection {
         let boardName = Configuration.getInstance().BoardName;
         winston.info(`Fetching board '${boardName}'`);
         const workApiObject: WorkApi.IWorkApi = await this.azureConnection.getWorkApi();
-        const columns = await workApiObject.getBoardColumns(this.teamContext, boardName);
+        const columnsName = await workApiObject.getBoardColumns(this.teamContext, boardName);
 
-        if (_.isNull(columns)){
+        if (_.isNull(columnsName)){
             winston.error(`Board ${boardName} not found. Exiting now.`)
             process.exit(1)
         }
 
-        this.createWorkflow(columns);
+        this.createWorkflow(columnsName);
         winston.info(`Workflow is: ${this.Workflow}`)
     }
 
@@ -105,7 +102,7 @@ export class AzureConnection {
             let id = workItem.id;
             updates = await witApi.getUpdates(workItem.id);
 
-            let workflowDates = this.extractColumnsAndDates(updates)
+            let workflowDates = this.extractColumnsNameAndDates(updates)
 
             myWorkItems[i] = new WorkItem(workItem.id, 
                                          this.generateLink(workItem.id),
@@ -131,7 +128,7 @@ export class AzureConnection {
             });
 
         if (_.isEmpty(s))
-            status = this.columns[0];
+            status = this.columnsName[0];
         else
             status = s['ColumnName'];
 
@@ -156,10 +153,10 @@ export class AzureConnection {
         };
     }
 
-    private extractColumnsAndDates(updates: witInterfaces.WorkItemUpdate[]): Array<any> {
+    private extractColumnsNameAndDates(updates: witInterfaces.WorkItemUpdate[]): Array<any> {
         let workflowDates = new Array<any>();
 
-        let columns = _.filter(updates, (x) => {
+        let columnsName = _.filter(updates, (x) => {
             if (x.fields === undefined)
                 return false;
 
@@ -167,16 +164,16 @@ export class AzureConnection {
                 x.fields['System.BoardColumnDone'] !== undefined
         });
 
-        let columnsMap = _.map(columns, (x) => {
+        let columnsNameMap = _.map(columnsName, (x) => {
             return {
                 'ColumnName': this.getValue(x),
                 'Date': parseISO(x.fields['System.ChangedDate'].newValue)
             };
         });
 
-        _.forEach(this.columns, function (columnName, index) {
+        _.forEach(this.columnsName, function (columnName, index) {
             // Find the latest date in which the work item went into the column
-            let item = _.findLast(columnsMap, (x) => { return x.ColumnName == columnName });
+            let item = _.findLast(columnsNameMap, (x) => { return x.ColumnName == columnName });
 
             if (item !== undefined)
                 workflowDates.push({ [columnName]: item.Date });
@@ -200,8 +197,8 @@ export class AzureConnection {
             if (subColumn === undefined || subColumn.oldValue === undefined) {    
                 // 3 scenarios in this block
                 //  1- This is the first column of the board
-                //  2- Work item moved from columns without subcolumns
-                //  3- Work item moved from a column without subcolumns to a column which didn't had subcolumns at that time but now has subcolumns
+                //  2- Work item moved from columnsName without subcolumnsName
+                //  3- Work item moved from a column without subcolumnsName to a column which didn't had subcolumnsName at that time but now has subcolumnsName
                 if (this.isSplitColumn[column.newValue])
                     return `${column.newValue} - Doing`;
                 else
@@ -209,9 +206,9 @@ export class AzureConnection {
             }
             else if (subColumn !== undefined) {
                 // 2 scenarios in this block
-                //  1- From columns with subcolumns
-                //  2- From column with subcolumns to column without subcolumn
-                // 3 - From column with subolumns to column with subcolumns
+                //  1- From columnsName with subcolumnsName
+                //  2- From column with subcolumnsName to column without subcolumn
+                // 3 - From column with subolumns to column with subcolumnsName
                 if (this.isSplitColumn[column.newValue]) {
                     if (subColumn.newValue === true)
                         // Doing -> Done
@@ -237,22 +234,18 @@ export class AzureConnection {
             return undefined;
     }
 
-    public get Workflow(): Array<string> {
-        return this.columns;
-    }
+    private createWorkflow(columnsName: BoardColumn[]): void {
 
-    private createWorkflow(columns: BoardColumn[]): void {
-
-        this.columns = new Array(0);
+        this.columnsName = new Array(0);
         this.isSplitColumn = new Map<string, boolean>();
-        for (let column of columns) {
+        for (let column of columnsName) {
             this.isSplitColumn[column.name] = column.hasOwnProperty('isSplit') && column.isSplit;
             if (column.isSplit === true) {
-                this.columns.push(`${column.name} - Doing`);
-                this.columns.push(`${column.name} - Done`);
+                this.columnsName.push(`${column.name} - Doing`);
+                this.columnsName.push(`${column.name} - Done`);
             }
             else
-                this.columns.push(column.name);
+                this.columnsName.push(column.name);
         }
     }
 
@@ -275,17 +268,22 @@ export class AzureConnection {
             return "";
     }
 
-    public get WipWorkItems(): Array<WorkItem> {
-        return this.wipWorkItems;
+    public get Workflow(): Array<string> {
+        return this.columnsName;
     }
-    private wipWorkItems: Array<WorkItem>;
+    private columnsName: Array<string>;
 
-    public get DoneWorkItems(): Array<WorkItem> {
-        return this.doneWorkItems;
+    public get Headers():Array<string>{
+        let headers = _.clone(this.Workflow);
+        headers = _.concat(headers, Configuration.getInstance().Properties);
+        return headers;            
     }
-    private doneWorkItems: Array<WorkItem>;
 
-    private columns: Array<string>;
+    public get Pbis(): Array<WorkItem> {
+        return this.pbis;
+    }
+    private pbis: Array<WorkItem>;
+
     private isSplitColumn: Map<string, boolean>;
     private lastColumn: string;
 

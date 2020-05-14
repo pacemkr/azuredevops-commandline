@@ -6,6 +6,10 @@ export class Configuration{
         return this.config.project.name as string;
     }
 
+    public get TeamName():string{
+        return this.config.project.teamName as string;
+    }
+
     public get DateFormat():string{
         return this.config.project.dateformat as string;
     }

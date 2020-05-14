@@ -49,23 +49,32 @@ export class AzureConnection {
     
     public async getProject():Promise<void>{
         let projectName = Configuration.getInstance().ProjectName;
+        let teamName = Configuration.getInstance().TeamName;
 
         const coreApiObject: CoreApi.CoreApi = await this.azureConnection.getCoreApi();
         const project: CoreInterfaces.TeamProject = await coreApiObject.getProject(projectName);
 
         if (_.isNull(project)){
-            winston.error(`Project ${projectName} not found. Exiting now.`)
+            winston.error(`Project '${projectName}' not found. Exiting now.`)
             process.exit(1)
         }
+
+        let team:CoreInterfaces.WebApiTeam;
+        if (teamName === undefined){
+            winston.info(`No team found. Using default team '${project.defaultTeam.name}'`);
+            team = project.defaultTeam;
+        }
+        else 
+            team = await coreApiObject.getTeam(project.id, teamName); 
 
         this.teamContext = {
             project: project.name,
             projectId: project.id,
-            team: project.defaultTeam.name,
-            teamId: project.defaultTeam.id
+            team: team.name,
+            teamId: team.id
         };
 
-        winston.info(`Connected to project ${project.name}`);
+        winston.info(`Connected to project '${this.teamContext.project}' with team '${this.teamContext.team}'`);
     }
 
     public async getBoardColumns():Promise<void>{
@@ -93,6 +102,7 @@ export class AzureConnection {
         if (workItems.length === 0)
             return;
 
+        let tempUpdates: witInterfaces.WorkItemUpdate[];
         let updates: witInterfaces.WorkItemUpdate[];
         let start = new Date();
         let myWorkItems = new Array<WorkItem>(workItems.length);
@@ -100,7 +110,18 @@ export class AzureConnection {
         for (let i in workItems) {
             workItem = workItems[i];
             let id = workItem.id;
-            updates = await witApi.getUpdates(workItem.id);
+            let moarUpdates: witInterfaces.WorkItemUpdate[];
+            updates = await witApi.getUpdates(workItem.id );
+            if (updates.length === 200){
+                let size = 200;
+                tempUpdates = await witApi.getUpdates(workItem.id, 200, size);
+                updates = _.concat(updates, tempUpdates);
+                while (tempUpdates.length === 200){
+                    size += 200;
+                    tempUpdates = await witApi.getUpdates(workItem.id, 200, size);
+                    updates = _.concat(updates, tempUpdates);
+                }
+            } 
 
             let workflowDates = this.extractColumnsNameAndDates(updates)
 
@@ -119,18 +140,17 @@ export class AzureConnection {
     private extractProperties(workflowDates:any[], updates:witInterfaces.WorkItemUpdate[]):Object{
 
         let properties = new Array<string>();
-        let status:string = '';
-        let s = _.findLast(workflowDates, (x) => {
-            if (x !== undefined)
-                return true;
-            else
-                return false;
-            });
 
-        if (_.isEmpty(s))
-            status = this.columnsName[0];
-        else
-            status = s['ColumnName'];
+        let latestDate = new Date(1900,0, 1, 0, 0, 0, 0);
+        let status = this.columnsName[0];
+        _.forEach(this.columnsName, (name, i) => {
+            let dateInThisColumn = workflowDates[i][name];
+            if (dateInThisColumn !== undefined &&
+                dateInThisColumn > latestDate ){
+                latestDate = dateInThisColumn
+                status = name;
+            }
+        });
 
         let workItemType = updates[0].fields["System.WorkItemType"].newValue;
         let effortField = _.findLast(updates, (x) => {

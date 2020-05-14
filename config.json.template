@@ -2,13 +2,12 @@
     "url": <The base URL where to extract data from> 
     "project": {
         "name": <The name of the project>,
+        "teamName":<The name of team (optional). Defaults to the default team in this project>,
         "token":<The token key>,
         "csvFilename":<The name of the csv file. Defaults to the name of project if none is given>,
         "dateformat":<The date format for dates in the csv file>,
-        "queries":{
-            "wip":<The query to fetch the Work In Progress items>,
-            "done":"<The query to fetch the Done items>"
-        },
+        "queries":[ <An array of queries to execute>
+        ],
         "properties":[ <An array of additional properties to extract>
         ]
     }

@@ -17,7 +17,9 @@ import { isNull } from 'lodash';
 
 export class AzureConnection {
 
-    constructor() {        
+    constructor(public Project:string,
+                public TeamName:string, 
+                public BoardName:string) {        
         this.pbis = new Array<WorkItem>(0);
     }
  
@@ -48,24 +50,22 @@ export class AzureConnection {
     }
     
     public async getProject():Promise<void>{
-        let projectName = Configuration.getInstance().ProjectName;
-        let teamName = Configuration.getInstance().TeamName;
 
         const coreApiObject: CoreApi.CoreApi = await this.azureConnection.getCoreApi();
-        const project: CoreInterfaces.TeamProject = await coreApiObject.getProject(projectName);
+        const project: CoreInterfaces.TeamProject = await coreApiObject.getProject(this.Project);
 
         if (_.isNull(project)){
-            winston.error(`Project '${projectName}' not found. Exiting now.`)
+            winston.error(`Project '${this.Project}' not found. Exiting now.`)
             process.exit(1)
         }
 
         let team:CoreInterfaces.WebApiTeam;
-        if (teamName === undefined){
+        if (this.TeamName === undefined){
             winston.info(`No team found. Using default team '${project.defaultTeam.name}'`);
             team = project.defaultTeam;
         }
         else 
-            team = await coreApiObject.getTeam(project.id, teamName); 
+            team = await coreApiObject.getTeam(project.id, this.TeamName); 
 
         this.teamContext = {
             project: project.name,
@@ -83,13 +83,12 @@ export class AzureConnection {
             process.exit(1);
         }
 
-        let boardName = Configuration.getInstance().BoardName;
-        winston.info(`Fetching board '${boardName}'`);
+        winston.info(`Fetching board '${this.BoardName}'`);
         const workApiObject: WorkApi.IWorkApi = await this.azureConnection.getWorkApi();
-        const columnsName = await workApiObject.getBoardColumns(this.teamContext, boardName);
+        const columnsName = await workApiObject.getBoardColumns(this.teamContext, this.BoardName);
 
         if (_.isNull(columnsName)){
-            winston.error(`Board ${boardName} not found. Exiting now.`)
+            winston.error(`Board ${this.BoardName} not found. Exiting now.`)
             process.exit(1)
         }
 

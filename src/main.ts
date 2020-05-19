@@ -1,5 +1,6 @@
 import * as winston from "winston";
 import * as _ from 'lodash';
+import * as json2csv from 'json2csv';
 
 import {AzureConnection} from "./AzureConnection"
 import {CsvExporter} from "./CsvExporter"
@@ -21,7 +22,11 @@ winston.configure({
 })
 
 
-let ac = new AzureConnection();
+let ac = new AzureConnection(
+    Configuration.getInstance().ProjectName,
+    Configuration.getInstance().TeamName,
+    Configuration.getInstance().BoardName);
+
 ac.connect().then(async function(result){
     await ac.getProject();
     await ac.getBoardColumns();
@@ -30,7 +35,8 @@ ac.connect().then(async function(result){
         await ac.fetchPbis(query);
     }
 
- 
+    
+
     let csvExporter = new CsvExporter(
         ac.Headers, 
         Configuration.getInstance().CsvFilename);

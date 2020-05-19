@@ -11,6 +11,7 @@ To build the application, type:
 ```npm run build ```
 
 You will need TypeScript version >= 3.0
+
 To update to latest version : 
 ```npm install -g typescript@latest```
 

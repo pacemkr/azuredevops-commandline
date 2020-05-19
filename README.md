@@ -8,7 +8,12 @@ To install the Node modules required, type:
 
 To build the application, type:
 
-```npm build ```
+```npm run build ```
+
+You will need TypeScript version >= 3.0
+
+To update to latest version : 
+```npm install -g typescript@latest```
 
 # Configuration
 To make it easy to understand how to configure the extraction, here's an example of a config file but instead of having values, each field has a short sentence to document it.

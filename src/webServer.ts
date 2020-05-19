@@ -3,13 +3,14 @@ import * as json2csv from 'json2csv';
 import * as _ from 'lodash';
 
 import {AzureConnection} from "./AzureConnection"
-import {CsvExporter} from "./CsvExporter"
 import {Configuration} from "./Configuration"
-import { WorkItem } from './WorkItem';
+import { runInNewContext } from 'vm';
 
 let app = express();
 
-app.get('/node/:project/:teamName/:board', async (req, res) => {
+app.get('/node/:project/:teamName/:board', async (req, res, next) => {
+try{
+
 
     let ac = new AzureConnection(
         req.params.project, 
@@ -17,24 +18,27 @@ app.get('/node/:project/:teamName/:board', async (req, res) => {
         req.params.board);
 
     await ac.connect();
-        await ac.getProject();
-        await ac.getBoardColumns();
+    await ac.getProject();
+    await ac.getBoardColumns();
     
-        for (let query of Configuration.getInstance().Queries){
-            await ac.fetchPbis(query);
-        }
-    
+    for (let query of Configuration.getInstance().Queries)
+        await ac.fetchPbis(query);
      
-        var fields = ac.Headers;
-        var d = new json2csv.Parser();
-        var stuff = _.map(ac.Pbis, (x) => {
-            return x.toObject();
-        })
-    d.preprocessFieldsInfo(fields);
-    var s = d.parse(stuff);
     
-        res.attachment('filename.csv');
-        res.status(200).send(s);
+    let exportableObjects = _.map(ac.Pbis, (x) => {
+        return x.toObject();
+    });
+
+    let jsonParser = new json2csv.Parser();
+    jsonParser.preprocessFieldsInfo(ac.Headers);
+    var dataInCsv = jsonParser.parse(exportableObjects);
+
+    res.attachment(`${req.params.project}.csv`);
+    res.status(200).send(dataInCsv);
+}
+catch (error){
+        return next(error);
+}
 });
 
 

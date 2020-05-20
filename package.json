@@ -2,7 +2,7 @@
   "name": "akpa-backend-azure",
   "version": "1.0.0",
   "description": "Backend to connect to Azure data",
-  "main": "index.js",
+  "main": "out/commandLine.js",
   "author": "Louis-Philippe Carignan",
   "license": "ISC",
   "dependencies": {
@@ -19,7 +19,7 @@
     "winston-transport-browserconsole": "^1.0.5"
   },
   "scripts": {
-    "start": "node out/main.js",
+    "start": "node out/commandLine.js",
     "prestart": "npm run build",
     "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"

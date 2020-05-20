@@ -17,7 +17,9 @@ import { isNull } from 'lodash';
 
 export class AzureConnection {
 
-    constructor() {        
+    constructor(public Project:string,
+                public TeamName:string, 
+                public BoardName:string) {        
         this.pbis = new Array<WorkItem>(0);
     }
  
@@ -36,10 +38,15 @@ export class AzureConnection {
 
     public async fetchPbis(query):Promise<void>{
 
-        winston.info(`Calling query ${query}`);
+        winston.info(`Calling query '${query}'`);
         const witApi: witApi.IWorkItemTrackingApi = await this.azureConnection.getWorkItemTrackingApi();
 
         const azureQuery: witInterfaces.QueryHierarchyItem = await witApi.getQuery(this.teamContext.project, query);
+        if (_.isNull(azureQuery)){
+            winston.error(`Query '${query}' not found.`);
+            throw new Error(`Query '${query}' not found.`);
+        }
+
         let results: witInterfaces.WorkItemQueryResult = await witApi.queryById(azureQuery.id, this.teamContext, false);        
         let workItems = await this.extractWorkItems(results.workItems, witApi);
 
@@ -48,24 +55,22 @@ export class AzureConnection {
     }
     
     public async getProject():Promise<void>{
-        let projectName = Configuration.getInstance().ProjectName;
-        let teamName = Configuration.getInstance().TeamName;
 
         const coreApiObject: CoreApi.CoreApi = await this.azureConnection.getCoreApi();
-        const project: CoreInterfaces.TeamProject = await coreApiObject.getProject(projectName);
+        const project: CoreInterfaces.TeamProject = await coreApiObject.getProject(this.Project);
 
         if (_.isNull(project)){
-            winston.error(`Project '${projectName}' not found. Exiting now.`)
-            process.exit(1)
+            winston.error(`Project '${this.Project}' not found.`);
+            throw new Error(`Project '${this.Project}' not found.`);
         }
 
         let team:CoreInterfaces.WebApiTeam;
-        if (teamName === undefined){
+        if (this.TeamName === undefined){
             winston.info(`No team found. Using default team '${project.defaultTeam.name}'`);
             team = project.defaultTeam;
         }
         else 
-            team = await coreApiObject.getTeam(project.id, teamName); 
+            team = await coreApiObject.getTeam(project.id, this.TeamName); 
 
         this.teamContext = {
             project: project.name,
@@ -79,22 +84,24 @@ export class AzureConnection {
 
     public async getBoardColumns():Promise<void>{
         if (this.teamContext === undefined){
-            winston.error(`Team context not created yet. Exiting now`);
-            process.exit(1);
+            winston.error(`Team context not created.`);
+            throw new Error(`Team context not created.`);
         }
 
-        let boardName = Configuration.getInstance().BoardName;
-        winston.info(`Fetching board '${boardName}'`);
+        winston.info(`Fetching board '${this.BoardName}'`);
         const workApiObject: WorkApi.IWorkApi = await this.azureConnection.getWorkApi();
-        const columnsName = await workApiObject.getBoardColumns(this.teamContext, boardName);
+        const columnsName = await workApiObject.getBoardColumns(this.teamContext, this.BoardName);
 
         if (_.isNull(columnsName)){
-            winston.error(`Board ${boardName} not found. Exiting now.`)
-            process.exit(1)
+            winston.error(`Board '${this.BoardName}' not found.`)
+            throw new Error(`Board '${this.BoardName}' not found.`);
         }
 
         this.createWorkflow(columnsName);
-        winston.info(`Workflow is: ${this.Workflow}`)
+        let s = _.reduce(this.Workflow, (accumulator:string, value:string) => {  
+            return accumulator + "\n\t" + value;
+        });
+        winston.info(`Workflow is: ${s}`)
     }
 
     private async extractWorkItems(workItems:witInterfaces.WorkItemReference[], witApi: witApi.IWorkItemTrackingApi):Promise<Array<WorkItem>>{

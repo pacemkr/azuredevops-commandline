@@ -8,13 +8,27 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch Program",
+            "name": "Launch Command Line",
             "outputCapture": "std",
             "skipFiles": [
                 "<node_internals>/**"
             ],
             "preLaunchTask": "npm: build",
-            "program": "${workspaceFolder}/out/main.js",
+            "program": "${workspaceFolder}/out/commandLine.js",
+            "outFiles": [
+                "${workspaceFolder}/**/*.js"
+            ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Launch Web Server",
+            "outputCapture": "std",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "preLaunchTask": "npm: build",
+            "program": "${workspaceFolder}/out/webServer.js",
             "outFiles": [
                 "${workspaceFolder}/**/*.js"
             ]

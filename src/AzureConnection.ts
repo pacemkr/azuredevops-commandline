@@ -38,13 +38,13 @@ export class AzureConnection {
 
     public async fetchPbis(query):Promise<void>{
 
-        winston.info(`Calling query ${query}`);
+        winston.info(`Calling query '${query}'`);
         const witApi: witApi.IWorkItemTrackingApi = await this.azureConnection.getWorkItemTrackingApi();
 
         const azureQuery: witInterfaces.QueryHierarchyItem = await witApi.getQuery(this.teamContext.project, query);
         if (_.isNull(azureQuery)){
-            winston.error(`Query '${azureQuery}' not found.`);
-            throw new Error(`Query '${azureQuery}' not found.`);
+            winston.error(`Query '${query}' not found.`);
+            throw new Error(`Query '${query}' not found.`);
         }
 
         let results: witInterfaces.WorkItemQueryResult = await witApi.queryById(azureQuery.id, this.teamContext, false);        
@@ -98,7 +98,10 @@ export class AzureConnection {
         }
 
         this.createWorkflow(columnsName);
-        winston.info(`Workflow is: ${this.Workflow}`)
+        let s = _.reduce(this.Workflow, (accumulator:string, value:string) => {  
+            return accumulator + "\n\t" + value;
+        });
+        winston.info(`Workflow is: ${s}`)
     }
 
     private async extractWorkItems(workItems:witInterfaces.WorkItemReference[], witApi: witApi.IWorkItemTrackingApi):Promise<Array<WorkItem>>{

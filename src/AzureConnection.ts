@@ -42,6 +42,11 @@ export class AzureConnection {
         const witApi: witApi.IWorkItemTrackingApi = await this.azureConnection.getWorkItemTrackingApi();
 
         const azureQuery: witInterfaces.QueryHierarchyItem = await witApi.getQuery(this.teamContext.project, query);
+        if (_.isNull(azureQuery)){
+            winston.error(`Query '${azureQuery}' not found.`);
+            throw new Error(`Query '${azureQuery}' not found.`);
+        }
+
         let results: witInterfaces.WorkItemQueryResult = await witApi.queryById(azureQuery.id, this.teamContext, false);        
         let workItems = await this.extractWorkItems(results.workItems, witApi);
 
@@ -55,8 +60,8 @@ export class AzureConnection {
         const project: CoreInterfaces.TeamProject = await coreApiObject.getProject(this.Project);
 
         if (_.isNull(project)){
-            winston.error(`Project '${this.Project}' not found. Exiting now.`)
-            process.exit(1)
+            winston.error(`Project '${this.Project}' not found.`);
+            throw new Error(`Project '${this.Project}' not found.`);
         }
 
         let team:CoreInterfaces.WebApiTeam;
@@ -79,8 +84,8 @@ export class AzureConnection {
 
     public async getBoardColumns():Promise<void>{
         if (this.teamContext === undefined){
-            winston.error(`Team context not created yet. Exiting now`);
-            process.exit(1);
+            winston.error(`Team context not created.`);
+            throw new Error(`Team context not created.`);
         }
 
         winston.info(`Fetching board '${this.BoardName}'`);
@@ -88,8 +93,8 @@ export class AzureConnection {
         const columnsName = await workApiObject.getBoardColumns(this.teamContext, this.BoardName);
 
         if (_.isNull(columnsName)){
-            winston.error(`Board ${this.BoardName} not found. Exiting now.`)
-            process.exit(1)
+            winston.error(`Board '${this.BoardName}' not found.`)
+            throw new Error(`Board '${this.BoardName}' not found.`);
         }
 
         this.createWorkflow(columnsName);

@@ -11,7 +11,6 @@ let app = express();
 app.get('/node/:project/:teamName/:board', async (req, res, next) => {
 try{
 
-
     let ac = new AzureConnection(
         req.params.project, 
         req.params.teamName,
@@ -21,7 +20,12 @@ try{
     await ac.getProject();
     await ac.getBoardColumns();
     
-    for (let query of Configuration.getInstance().Queries)
+    // Build the queries based on the team name
+    let queries = _.map(Configuration.getInstance().Queries, (query) => {
+        return _.replace(query, "/", `/${req.params.teamName} - `);
+    });
+
+    for (let query of queries)
         await ac.fetchPbis(query);
      
     
@@ -33,7 +37,7 @@ try{
     jsonParser.preprocessFieldsInfo(ac.Headers);
     var dataInCsv = jsonParser.parse(exportableObjects);
 
-    res.attachment(`${req.params.project}.csv`);
+    res.attachment(`${req.params.project} - ${req.params.teamName}.csv`);
     res.status(200).send(dataInCsv);
 }
 catch (error){
